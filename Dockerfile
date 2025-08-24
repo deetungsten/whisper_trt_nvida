@@ -27,15 +27,22 @@ COPY whisper_trt/ whisper_trt/
 # Install PyTorch and dependencies for Jetson
 RUN pip3 install --upgrade pip setuptools wheel
 
-# Install whisper and torch2trt dependencies
+# Install Python dependencies (except torch2trt)
 RUN pip3 install \
     openai-whisper \
-    torch2trt \
     pyaudio \
     psutil \
     faster-whisper \
-    webrtcvad \
-    && pip3 install -e .
+    webrtcvad
+
+# Install torch2trt from source for Jetson
+RUN git clone https://github.com/NVIDIA-AI-IOT/torch2trt.git /tmp/torch2trt && \
+    cd /tmp/torch2trt && \
+    python3 setup.py install && \
+    rm -rf /tmp/torch2trt
+
+# Install the whisper_trt package
+RUN pip3 install -e .
 
 # Create cache directory with proper permissions
 RUN mkdir -p /root/.cache/whisper_trt && \
