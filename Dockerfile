@@ -11,6 +11,8 @@ RUN apt-get update && apt-get install -y \
     portaudio19-dev \
     python3-pyaudio \
     ffmpeg \
+    binutils \
+    wget \
     && rm -rf /var/lib/apt/lists/*
 
 # Create working directory
@@ -28,8 +30,13 @@ RUN pip3 install \
     faster-whisper
 
 # Fix the libnvdla_compiler.so issue on JetPack 36.4.2
-RUN wget -q -O - https://repo.download.nvidia.com/jetson/common/pool/main/n/nvidia-l4t-tensorrt/nvidia-l4t-tensorrt_8.6.2.3-1_arm64.deb | \
-    tar -Oxf - ./usr/lib/aarch64-linux-gnu/libnvdla_compiler.so > /usr/lib/aarch64-linux-gnu/nvidia/libnvdla_compiler.so
+RUN mkdir -p /tmp/fix && cd /tmp/fix && \
+    wget https://repo.download.nvidia.com/jetson/common/pool/main/n/nvidia-l4t-tensorrt/nvidia-l4t-tensorrt_8.6.2.3-1_arm64.deb && \
+    ar x nvidia-l4t-tensorrt_8.6.2.3-1_arm64.deb && \
+    tar -xf data.tar.xz && \
+    mkdir -p /usr/lib/aarch64-linux-gnu/nvidia && \
+    cp usr/lib/aarch64-linux-gnu/libnvdla_compiler.so /usr/lib/aarch64-linux-gnu/nvidia/ && \
+    cd / && rm -rf /tmp/fix
 
 # Install torch2trt from source (this base image has proper TensorRT setup)
 RUN git clone https://github.com/NVIDIA-AI-IOT/torch2trt.git /tmp/torch2trt && \
