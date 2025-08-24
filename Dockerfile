@@ -1,5 +1,5 @@
-# Multi-stage build for WhisperTRT on Jetson Orin Nano
-FROM nvcr.io/nvidia/l4t-pytorch:r35.2.1-pth2.0-py3
+# Use NVIDIA Jetson container with TensorRT support
+FROM nvcr.io/nvidia/l4t-jetpack:r36.3.0
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y \
     python3-pyaudio \
     ffmpeg \
     curl \
+    wget \
     pkg-config \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
@@ -31,8 +32,13 @@ WORKDIR /app
 COPY setup.py .
 COPY whisper_trt/ whisper_trt/
 
-# Install PyTorch and dependencies for Jetson
+# Install PyTorch wheel for Jetson (ARM64)
 RUN pip3 install --upgrade pip setuptools wheel
+
+# Download and install PyTorch for Jetson
+RUN wget https://developer.download.nvidia.com/compute/redist/jp/v60/pytorch/torch-2.3.0-cp310-cp310-linux_aarch64.whl -O torch-2.3.0-cp310-cp310-linux_aarch64.whl && \
+    pip3 install torch-2.3.0-cp310-cp310-linux_aarch64.whl && \
+    rm torch-2.3.0-cp310-cp310-linux_aarch64.whl
 
 # Install Python dependencies (except torch2trt)
 RUN pip3 install \
@@ -45,8 +51,9 @@ RUN pip3 install \
 RUN pip3 install --no-deps faster-whisper && \
     pip3 install "tokenizers>=0.14.1" ctranslate2 huggingface-hub
 
-# Install torch2trt from source for Jetson
-RUN git clone https://github.com/NVIDIA-AI-IOT/torch2trt.git /tmp/torch2trt && \
+# Fix TensorRT library links and install torch2trt
+RUN ln -s /usr/lib/aarch64-linux-gnu/libnvdla_compiler.so /usr/lib/libnvdla_compiler.so || true && \
+    git clone https://github.com/NVIDIA-AI-IOT/torch2trt.git /tmp/torch2trt && \
     cd /tmp/torch2trt && \
     python3 setup.py install && \
     rm -rf /tmp/torch2trt
