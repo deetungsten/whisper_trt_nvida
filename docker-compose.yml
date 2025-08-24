@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  whisper-trt:
+    build: .
+    image: whisper-trt:jetson
+    container_name: whisper-trt-container
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility,video
+    volumes:
+      # Mount local audio files directory
+      - ./assets:/app/assets:ro
+      # Mount cache directory for TensorRT engines (persistent)
+      - whisper-cache:/root/.cache/whisper_trt
+      # Mount examples for easy editing
+      - ./examples:/app/examples:ro
+      # Optional: Mount for audio device access
+      - /dev/snd:/dev/snd
+    devices:
+      # Audio device access for live transcription
+      - /dev/snd:/dev/snd
+    privileged: true  # Required for audio device access
+    stdin_open: true
+    tty: true
+    command: /bin/bash
+
+  # Service for running specific examples
+  transcribe:
+    build: .
+    image: whisper-trt:jetson
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility,video
+    volumes:
+      - ./assets:/app/assets:ro
+      - whisper-cache:/root/.cache/whisper_trt
+    profiles:
+      - transcribe
+    command: ["python3", "examples/transcribe.py", "tiny.en", "assets/speech.wav", "--backend", "whisper_trt"]
+
+  profile:
+    build: .
+    image: whisper-trt:jetson
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility,video
+    volumes:
+      - ./assets:/app/assets:ro
+      - whisper-cache:/root/.cache/whisper_trt
+    profiles:
+      - profile
+    command: ["python3", "examples/profile_backend.py", "tiny.en", "assets/speech.wav", "--backend", "whisper_trt"]
+
+  live:
+    build: .
+    image: whisper-trt:jetson
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility,video
+    volumes:
+      - whisper-cache:/root/.cache/whisper_trt
+      - /dev/snd:/dev/snd
+    devices:
+      - /dev/snd:/dev/snd
+    privileged: true
+    profiles:
+      - live
+    command: ["python3", "examples/live_transcription.py", "tiny.en", "--backend", "whisper_trt"]
+
+volumes:
+  whisper-cache:
