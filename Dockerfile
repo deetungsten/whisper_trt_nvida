@@ -6,8 +6,11 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 ENV CUDA_MODULE_LOADING=LAZY
 
-# Install system dependencies including Rust
+# Install system dependencies including Python and Rust
 RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    python3-dev \
     git \
     cmake \
     build-essential \
