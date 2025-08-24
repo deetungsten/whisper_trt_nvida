@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 ENV CUDA_MODULE_LOADING=LAZY
 
-# Install system dependencies
+# Install system dependencies including Rust
 RUN apt-get update && apt-get install -y \
     git \
     cmake \
@@ -15,7 +15,14 @@ RUN apt-get update && apt-get install -y \
     portaudio19-dev \
     python3-pyaudio \
     ffmpeg \
+    curl \
+    pkg-config \
+    libssl-dev \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Rust for compiling tokenizers from source
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
 
 # Create working directory
 WORKDIR /app
@@ -32,8 +39,11 @@ RUN pip3 install \
     openai-whisper \
     pyaudio \
     psutil \
-    faster-whisper \
     webrtcvad
+
+# Install faster-whisper without tokenizers dependency first, then install compatible tokenizers
+RUN pip3 install --no-deps faster-whisper && \
+    pip3 install "tokenizers>=0.14.1" ctranslate2 huggingface-hub
 
 # Install torch2trt from source for Jetson
 RUN git clone https://github.com/NVIDIA-AI-IOT/torch2trt.git /tmp/torch2trt && \
